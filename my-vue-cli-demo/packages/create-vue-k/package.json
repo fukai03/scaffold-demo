@@ -1,0 +1,24 @@
+{
+  "name": "create-vue-k",
+  "version": "1.0.0",
+  "description": "",
+  "bin": {
+    "create-vue-k": "index.js",
+    "cvk": "index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "fukai",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "chalk": "^5.2.0",
+    "command-line-args": "^5.2.1",
+    "command-line-usage": "^6.1.3",
+    "download-git-repo": "^3.0.2",
+    "ora": "^6.1.2",
+    "prompts": "^2.4.2"
+  }
+}
