@@ -5,19 +5,25 @@ import chalk from 'chalk';
 import prompts from 'prompts'
 import fs from 'node:fs'
 import path from 'node:path'
+import ejs from 'ejs'
 import { fileURLToPath } from 'node:url'
 import ora from 'ora';
 import download from 'download-git-repo';
+import figlet from 'figlet';
+
+const __dirname = path.resolve();
 
 
-
+console.log(figlet.textSync('Welcome!', {
+    font: 'Ghost',
+    horizontalLayout: 'default',
+    verticalLayout: 'default',
+    width: 100,
+    whitespaceBreak: true
+}));
 console.log(chalk.bgBlueBright('welcome to my scaffold'));
+
 const promptsOptions = [
-    //   {
-    //     type: 'text',
-    //     name: 'user',
-    //     message: '用户'
-    //   },
     {
         type: 'text',
         name: 'name',
@@ -42,7 +48,9 @@ const promptsOptions = [
             { title: 'vue2', value: 1 },
             { title: 'vue3', value: 2 },
             { title: 'react', value: 3 },
-            { title: 'react-inner', value: 4 }
+            { title: 'react-ts', value: 4 },
+            { title: 'vue3-local', value: 5 },
+            { title: 'react-local', value: 6 },
         ]
     },
     //   {
@@ -62,7 +70,7 @@ const remoteList = {
     3: ['https://github.com/wtchnm/Vitamin.git', 'main'],
     4: ['https://fukai03@icode.baidu.com/baidu/acg-det/vcl-scaffolding-fe', 'master'] //组内react脚手架
 }
-// 模板克隆函数
+// 远程模板克隆函数
 const gitClone = (remote, name, option) => {
     const downSpinner = ora('正在下载模板...').start();
     return new Promise((resolve, reject) => {
@@ -82,13 +90,95 @@ const gitClone = (remote, name, option) => {
         });
     });
 };
-const branch = 'main'
+
+/**
+ * @description 模板文件的读取、渲染以及生成
+ * @param tempDir 模板路径
+ * @param destDir 目标路径
+ * @param answer 用户输入的内容
+ */
+const rw = (tempDir, destDir, answer) => {
+    try {
+        // console.log(tempDir, destDir);
+        const files = fs.readdirSync(tempDir)
+
+        files.forEach(file => {
+            const filePath = path.join(tempDir, file)
+            const targetDir = path.join(destDir, file)
+
+            const stats = fs.statSync(filePath)
+
+            if (stats.isFile()) {
+                if (destDir.includes('img') || destDir.includes('fonts') || destDir.includes('icon') || destDir.includes('.ico')) {
+                    const readStream = fs.createReadStream(filePath)
+                    const writeStream = fs.createWriteStream(targetDir)
+                    readStream.pipe(writeStream)
+                } else {
+                    ejs.renderFile(filePath, answer, (err2, res) => {
+                        if (err2) throw err2
+                        // 将渲染完成后的结果写入目标路径
+                        fs.writeFileSync(path.join(destDir, file), res)
+                    })
+                }
+            } else {
+                fs.mkdirSync(targetDir)
+                rw(filePath, targetDir, answer)
+            }
+        })
+
+    } catch (e) {
+        throw e
+    }
+}
+
+// 脚手架本地模板克隆函数
+const localClone = (templateName, projectName) => {
+    // 模板路径
+    const tempDir = path.resolve(
+        fileURLToPath(import.meta.url),
+        './..',
+        `${templateName}`,
+    )
+    // 目标路径
+    const destDir = path.join(process.cwd(), projectName)
+    // // 判断当前文件夹下是否有目标路径的目录
+    // if (fs.existsSync(destDir)) {
+    //     throw Error(`Folder named '${answer.name}' is already existed`)
+    // }
+    // 创建文件夹
+    fs.mkdir(destDir, { recursive: true }, (err) => {
+        if (err) throw err
+    })
+
+
+    // 将模板下的文件全部转换到目标目录
+    rw(tempDir, destDir, {name: projectName})
+
+    // 成功后的打印
+    console.log(`Congratulations! Project '${projectName}' has been created successfully~`)
+
+}
+
+const templateNameList = {
+    5: 'template-vue3'
+}
+// 获取用户交互信息并处理
 const getInputInfo = async () => {
     const res = await prompts(promptsOptions)
     console.log(res)
     if (!res.name || !res.template) return
-    gitClone(`direct:${remoteList[res.template][0]}#${remoteList[res.template][1]}`, res.name, { clone: true })
+
+
+    if (res.template > 4) { // 拉取脚手架本地模板
+        let templatename = templateNameList[res.template] || 'template-vue3'
+        console.log(templatename);
+        localClone(templatename, res.name)
+    } else { // 拉取线上模板
+        gitClone(`direct:${remoteList[res.template][0]}#${remoteList[res.template][1]}`, res.name, { clone: true })
+    }
+
 }
+
 
 
 //帮助内容
@@ -109,12 +199,7 @@ const helpSections = [
                 name: 'template',
                 typeLabel: '{underline string}',
                 description: '模板',
-            },
-            {
-                name: 'arg',
-                typeLabel: '{underline number}',
-                description: '参数',
-            },
+            }
         ],
     },
 ];
@@ -129,48 +214,7 @@ const optionDefinitions = [
 
 const options = commandLineArgs(optionDefinitions)
 
-// function copy(src, dest) {
-//     const stat = fs.statSync(src)
-//     if (stat.isDirectory()) {
-//       copyDir(src, dest)
-//     } else {
-//       fs.copyFileSync(src, dest)
-//     }
-// }
-// function copyDir(srcDir, destDir) {
-//     fs.mkdirSync(destDir, { recursive: true })
-//     for (const file of fs.readdirSync(srcDir)) {
-//       const srcFile = path.resolve(srcDir, file)
-//       const destFile = path.resolve(destDir, file)
-//       copy(srcFile, destFile)
-//     }
-//   }
-//   const write = (file, content = '') => {
-//     const targetPath = path.join(root, renameFiles[file] ?? file)
-//     if (content) {
-//       fs.writeFileSync(targetPath, content)
-//     } else {
-//       copy(path.join(templateDir, file), targetPath)
-//     }
-//   }
 
-//   const templateDir = path.resolve(
-//     fileURLToPath(import.meta.url),
-//     '../..',
-//     `${template}`,
-//   )
-
-//   const files = fs.readdirSync(templateDir)
-//   for (const file of files.filter((f) => f !== 'package.json')) {
-//     write(file)
-//   }
-//   const pkg = JSON.parse(
-//     fs.readFileSync(path.join(templateDir, `package.json`), 'utf-8'),
-//   )
-
-//   pkg.name = packageName || getProjectName()
-
-//   write('package.json', JSON.stringify(pkg, null, 2) + '\n')
 
 if (options.help) {
     console.log(chalk.green(commandLineUsage(helpSections)));

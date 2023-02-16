@@ -11,6 +11,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "create-vue-k": "^1.0.0"
+    "create-vue-k": "workspace:^1.0.0"
   }
 }
