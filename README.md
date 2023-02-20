@@ -175,7 +175,9 @@ if (options.help) {
 
 
 #####  拉取模板
-* 当获取到用户输入或选择的信息的时候,我们就可以输出对应模板给用户。可使用远程拉取的方式来完成
+* 当获取到用户输入或选择的信息的时候,我们就可以输出对应模板给用户。可使用远程拉取的方式来完成和拉取脚手架内部模板两种方式
+
+###### 拉取远程模板
 * 安装download-git-repo,使用其的clone方法，并安装 ora 来实现拉取模板时的loading状态
 
 ```bash
@@ -223,6 +225,111 @@ const getInputInfo = async () => {
     gitClone(`direct:${remoteList[res.template]}#${branch}`, res.name, { clone: true })
 }
 ```
+
+###### 拉取脚手架内部分支
+* 首先在create-vue-k文件夹内新建一个文件夹用于存放模板，如创建template-vue3文件夹作为一个脚手架内部模板
+* 修改index.js文件
+  * 修改选项配置，新增 { title: 'vue3-local', value: 5 }作为拉取脚手架内部模板选项
+
+```js
+const promptsOptions = [
+// ...
+    {
+        type: 'select',//单选
+        name: 'template',
+        message: '模板选择',
+        choices: [
+            { title: 'vue2', value: 1 },
+            { title: 'vue3', value: 2 },
+            { title: 'react', value: 3 },
+            { title: 'react-ts', value: 4 },
+            { title: 'vue3-local', value: 5 },
+        ]
+    },
+]
+```
+* 新增克隆文件函数
+```js
+// 脚手架本地模板克隆函数
+const localClone = (templateName, projectName) => {
+    // 模板路径
+    const tempDir = path.resolve(
+        fileURLToPath(import.meta.url),
+        './..',
+        `${templateName}`,
+    )
+    // 目标路径
+    const destDir = path.join(process.cwd(), projectName)
+
+    // 创建文件夹
+    fs.mkdir(destDir, { recursive: true }, (err) => {
+        if (err) throw err
+    })
+
+
+    // 将模板下的文件全部转换到目标目录
+    rw(tempDir, destDir, {name: projectName})
+
+    // 成功后的打印
+    console.log(`Congratulations! Project '${projectName}' has been created successfully~`)
+
+}
+/**
+ * @description 模板文件的读取、渲染以及生成
+ * @param tempDir 模板路径
+ * @param destDir 目标路径
+ * @param answer 用户输入的内容
+ */
+const rw = (tempDir, destDir, answer) => {
+    try {
+        // console.log(tempDir, destDir);
+        const files = fs.readdirSync(tempDir)
+
+        files.forEach(file => {
+            const filePath = path.join(tempDir, file)
+            const targetDir = path.join(destDir, file)
+
+            const stats = fs.statSync(filePath)
+
+            if (stats.isFile()) {
+                if (destDir.includes('img') || destDir.includes('fonts') || destDir.includes('icon') || destDir.includes('.ico')) {
+                    const readStream = fs.createReadStream(filePath)
+                    const writeStream = fs.createWriteStream(targetDir)
+                    readStream.pipe(writeStream)
+                } else {
+                    ejs.renderFile(filePath, answer, (err2, res) => {
+                        if (err2) throw err2
+                        // 将渲染完成后的结果写入目标路径
+                        fs.writeFileSync(path.join(destDir, file), res)
+                    })
+                }
+            } else {
+                fs.mkdirSync(targetDir)
+                rw(filePath, targetDir, answer)
+            }
+        })
+
+    } catch (e) {
+        throw e
+    }
+}
+```
+* 修改获取用户交互信息函数的判断条件，修改完后即可根据用户选项拉取远程或脚手架内部模板。
+```js
+// 获取用户交互信息并处理
+const getInputInfo = async () => {
+// ...
+    if (res.template > 4) { // 拉取脚手架本地模板
+        let templatename = templateNameList[res.template] || 'template-vue3'
+        console.log(templatename);
+        localClone(templatename, res.name)
+    } else { // 拉取线上模板
+        gitClone(`direct:${remoteList[res.template][0]}#${remoteList[res.template][1]}`, res.name, { clone: true })
+    }
+
+}
+```
+
 #####  本地测试
 * 以上步骤基本完成了一个脚手架的本地搭建，进入到cli-demo文件夹中进行本地验证。通过以下视频中的操作，即可看到在cli-demo文件夹下新增了test文件夹，进入该文件夹中安装依赖即可运行改模板
 ![gif2](images/image_3.gif)
@@ -245,5 +352,5 @@ npm i create-vue-k
 * 执行脚手架命令，通过选择拉取模板
 
 ```bash
-npm run create-vue-k
+npx create-vue-k
 ```

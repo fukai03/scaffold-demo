@@ -53,16 +53,6 @@ const promptsOptions = [
             { title: 'react-local', value: 6 },
         ]
     },
-    //   {
-    //     type: 'multiselect', //多选
-    //     name: 'study',
-    //     message: '选择学习框架',
-    //     choices: [
-    //       { title: 'Vue', value: 0 },
-    //       { title: 'React', value: 1 },
-    //       { title: 'Angular', value: 2 }
-    //     ]
-    //   },
 ]
 const remoteList = {
     1: ['https://github.com/lstoeferle/vite-vue2-windicss-starter.git', 'main'],
@@ -141,10 +131,7 @@ const localClone = (templateName, projectName) => {
     )
     // 目标路径
     const destDir = path.join(process.cwd(), projectName)
-    // // 判断当前文件夹下是否有目标路径的目录
-    // if (fs.existsSync(destDir)) {
-    //     throw Error(`Folder named '${answer.name}' is already existed`)
-    // }
+
     // 创建文件夹
     fs.mkdir(destDir, { recursive: true }, (err) => {
         if (err) throw err
